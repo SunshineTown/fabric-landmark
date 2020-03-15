@@ -44,5 +44,5 @@
 * `/lmsg <text>`
 text中输入的文字，所有[地标id]都会被替换为类似坐标列表中的坐标一样，附带悬浮提示和点击事件。
 这些格式都是合法的:  
-`[name]`  `[HellDoor]`  `[SlimeFarm:x y z]`   `[base 主世界丨基地：232  4  175]`(列表的shift+左击
+`[name]`  `[HellDoor]`  `[SlimeFarm:x y z]`   `[base 主世界丨基地：232  4  175]`(列表的shift+左击  
 `只需要保证[后直接跟一个地标id即可，之后格式随意`
