@@ -3,6 +3,8 @@ package net.xingmot.landmark.config;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.Formatting;
+import net.minecraft.world.dimension.DimensionType;
 import net.xingmot.landmark.LandmarkMod;
 import net.xingmot.landmark.config.Pojo.*;
 
@@ -14,9 +16,8 @@ public class PointManager {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private final File configFile;
 
-    public PointManager() {
-        String levelName=LandmarkMod.levelName;
-        this.configFile = new File("LandmarkPoint/"+levelName+"/LandmarkPoint.json");
+    public PointManager(MinecraftServer server) {
+        this.configFile = new File(server.getWorld(DimensionType.OVERWORLD).getSaveHandler().getWorldDir(), "LandmarkPoint.json");
         try {
             loadPoint();
         } catch (IOException e) {
@@ -46,7 +47,7 @@ public class PointManager {
         return pointGroup;
     }
 
-    private LandmarkPoint pointNew(String name, String color, int x, int y, int z, String dimension){
+    private LandmarkPoint pointNew(String name, Formatting color, int x, int y, int z, String dimension){
         LandmarkPoint point0;
         //"id": { "name": "", "color": "color", "x":x, "y":y, "z":z,"dimension":dimension}
         point0=new LandmarkPoint(name, color, x, y, z, dimension);
@@ -54,7 +55,7 @@ public class PointManager {
     }
 
     //添加地标
-    public void addPoint(String type,String id,String name,String color,int x,int y,int z,String dimension){
+    public void addPoint(String type,String id,String name,Formatting color,int x,int y,int z,String dimension){
         LandmarkPoint pointMap;
         pointMap=pointNew(name, color, x, y, z, dimension);
         if(LandmarkMod.point.category.get(type)==null){
@@ -105,7 +106,7 @@ public class PointManager {
     }
 
     //改颜色
-    public boolean colorPoint(String type,String id,String color){
+    public boolean colorPoint(String type,String id, Formatting color){
         if(LandmarkMod.point.category.get(type).pointGroups.get(id)!=null){
             LandmarkMod.point.category.get(type).pointGroups.get(id).color=color;
             try {

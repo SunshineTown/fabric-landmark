@@ -3,7 +3,6 @@ package net.xingmot.landmark.config;
 public final class Jsons{
     public String landmarkCreate=
             "{\"text\":\"%s\"," +
-                    "\"color\":\"%s\"," +
                     "\"insertion\":\"[%s : %d  %d  %d]\"," +
                     "\"hoverEvent\":{\"action\":\"show_text\"," +
                                                 "\"value\":\"[ %s : %d  %d  %d](id:%s)\"}" +
@@ -12,7 +11,6 @@ public final class Jsons{
     public String landmarkShare=
             "{\"text\":\"%s\"," +
                     "\"clickEvent\": {\"action\": \"run_command\", \"value\": \"/landmark return %s %s\"}," +
-                    "\"color\":\"%s\"," +
                     "\"insertion\":\"[%s : %d  %d  %d]\"," +
                     "\"hoverEvent\":{\"action\":\"show_text\"," +
                     "\"value\":\"[ %s : %d  %d  %d](id:%s)\"}" +

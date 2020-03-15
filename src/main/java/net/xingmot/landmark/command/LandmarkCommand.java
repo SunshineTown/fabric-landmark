@@ -1,25 +1,13 @@
 package net.xingmot.landmark.command;
 
 import com.mojang.brigadier.CommandDispatcher;
-
-import static net.minecraft.server.command.CommandManager.argument;
-import static net.minecraft.server.command.CommandManager.literal;
-
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.suggestion.SuggestionProvider;
-import com.mojang.brigadier.suggestion.Suggestions;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import net.minecraft.command.arguments.BlockPosArgumentType;
-import net.minecraft.command.arguments.DimensionArgumentType;
-import net.minecraft.command.arguments.EntityArgumentType;
-import net.minecraft.command.arguments.MessageArgumentType;
+import net.minecraft.command.arguments.*;
 import net.minecraft.entity.Entity;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.dedicated.ServerPropertiesHandler;
-import net.minecraft.server.dedicated.ServerPropertiesLoader;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
@@ -29,11 +17,13 @@ import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.dimension.DimensionType;
 import net.xingmot.landmark.LandmarkMod;
 import net.xingmot.landmark.config.LandmarkPoint;
-import net.xingmot.landmark.config.PointManager;
 
 import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.Map;
+import java.util.Objects;
+
+import static net.minecraft.server.command.CommandManager.argument;
+import static net.minecraft.server.command.CommandManager.literal;
 
 public class LandmarkCommand {
     //指令注册
@@ -43,22 +33,21 @@ public class LandmarkCommand {
                     .then(literal("set")        //    landmark <name> <x> <y> <z>
                             .requires(source -> source.hasPermissionLevel(1))
                             .then(argument("id", StringArgumentType.word())
-                                    .then(argument("x y z", BlockPosArgumentType.blockPos())
-                                            .then(argument("color", StringArgumentType.word())
-                                                    .suggests(suggestColor())
+                                    .then(argument("location", BlockPosArgumentType.blockPos())
+                                            .then(argument("color", ColorArgumentType.color())
                                                     .executes(context ->
                                                             setLandmark(context.getSource(),
                                                                     StringArgumentType.getString(context,"id"),
-                                                                    BlockPosArgumentType.getBlockPos(context,"x y z"),
-                                                                    StringArgumentType.getString(context,"color"),
+                                                                    BlockPosArgumentType.getBlockPos(context,"location"),
+                                                                    ColorArgumentType.getColor(context,"color"),
                                                                     Objects.requireNonNull(DimensionType.getId(context.getSource().getPlayer().getServerWorld().getDimension().getType())).getPath()))
                                                     .then(argument("dimension",DimensionArgumentType.dimension())
                                                             //.suggests(suggestDimension())
                                                             .executes(context ->
                                                                     setLandmark(context.getSource(),
                                                                             StringArgumentType.getString(context,"id"),
-                                                                            BlockPosArgumentType.getBlockPos(context,"x y z"),
-                                                                            StringArgumentType.getString(context,"color"),
+                                                                            BlockPosArgumentType.getBlockPos(context,"location"),
+                                                                            ColorArgumentType.getColor(context,"color"),
                                                                             Objects.requireNonNull(DimensionType.getId(DimensionArgumentType.getDimensionArgument(context, "dimension"))).getPath()
                                                                     )))))))
                     .then(literal("delete")
@@ -73,11 +62,10 @@ public class LandmarkCommand {
                     .then(literal("color")
                             .requires(source -> source.hasPermissionLevel(1))
                             .then(argument("id",StringArgumentType.word())
-                                    .then(argument("color",StringArgumentType.word())
-                                            .suggests(suggestColor())
+                                    .then(argument("color",ColorArgumentType.color())
                                             .executes(context -> colorLandmark(context.getSource(),
                                                     StringArgumentType.getString(context,"id"),
-                                                    StringArgumentType.getString(context,"color"))))))
+                                                    ColorArgumentType.getColor(context,"color"))))))
                     .then(literal("rename")
                             .requires(source -> source.hasPermissionLevel(1))
                             .then(argument("id",StringArgumentType.word())
@@ -121,19 +109,12 @@ public class LandmarkCommand {
         }//lmsg
     }
 
-    //颜色参数的自动填充
-    private static SuggestionProvider<ServerCommandSource> suggestColor(){
-        List<String> suggestList=Arrays.asList(Formatting.getNames(true,false).toArray(new String[0]));
-        return (context, builder) -> getSuggestionsBuilder(builder,suggestList);
-    }
-
     //地标建立 /landmark set id ~ ~ ~ color [dimension]
-    private static int setLandmark(ServerCommandSource source, String id, BlockPos coordinate, String color, String dimension) throws CommandSyntaxException{
+    private static int setLandmark(ServerCommandSource source, String id, BlockPos coordinate, Formatting color, String dimension) throws CommandSyntaxException{
         ServerPlayerEntity player = source.getPlayer();
-        PointManager manager=new PointManager();
-        manager.addPoint("default",id,id,color,coordinate.getX(),coordinate.getY(),coordinate.getZ(),dimension);
+        LandmarkMod.pointManager.addPoint("default",id,id,color,coordinate.getX(),coordinate.getY(),coordinate.getZ(),dimension);
         try{
-            manager.savePoint();
+            LandmarkMod.pointManager.savePoint();
             player.sendMessage(Text.Serializer.fromJson(String.format("[{\"text\":\"%s\"},",LandmarkMod.config.landmark.landmarkCreateTips) +
                     getSmpPointJson(id) +","+normalJson(" ！")+"]"));
         }catch(Exception e){
@@ -145,9 +126,8 @@ public class LandmarkCommand {
     //地标删除 /landmark delete id
     private static int delLandmark(ServerCommandSource source, String id) throws CommandSyntaxException {
         ServerPlayerEntity player = source.getPlayer();
-        PointManager manager=new PointManager();
 
-        if(manager.delPoint("default",id)){
+        if(LandmarkMod.pointManager.delPoint("default",id)){
             player.sendMessage(new LiteralText(LandmarkMod.config.landmark.landmarkDel+"["+id+"] ！"));
         }else{
             player.sendMessage(new LiteralText(LandmarkMod.config.landmark.landmarkNull));
@@ -161,7 +141,7 @@ public class LandmarkCommand {
         StringBuilder jsons= new StringBuilder("[");
         String id;
         String name;
-        String color;
+        Formatting color;
         String dimension;
         String des;     //暂未加入
         int x,y,z;
@@ -178,9 +158,9 @@ public class LandmarkCommand {
                 z=entry.getValue().z;
                 dimension=entry.getValue().dimension;
                 des=entry.getValue().description;        //暂时没做
-                jsons.append(String.format(LandmarkMod.config.jsons.listPointExample, id, color, LandmarkMod.config.landmark.dimensions_name.get(dimension),
+                jsons.append(String.format(LandmarkMod.config.jsons.listPointExample, id, LandmarkMod.config.landmark.dimensions_name.get(dimension),
                         x, y, z, id, id,LandmarkMod.config.landmark.dimensions_name2.get(dimension)+"丨"+name, x, y, z,
-                        "["+name+"]", id, id, id)).append(",");
+                        color + "["+name+"]", id, id, id)).append(",");
             }
             jsons.append(LandmarkMod.config.jsons.listAddPoint);
             jsons.append("]");
@@ -195,22 +175,19 @@ public class LandmarkCommand {
         if(!existPoint("default", id)){
             player.sendMessage(new LiteralText(LandmarkMod.config.landmark.landmarkNull));
         }else{
-            PointManager manager=new PointManager();
-            manager.renamePoint("default",id,name);
-            LandmarkPoint point=getPoint("default",id);
+            LandmarkMod.pointManager.renamePoint("default",id,name);
             player.sendMessage(Text.Serializer.fromJson("["+normalJson(LandmarkMod.config.landmark.landmarkRenameTips)+","+
                             getSmpPointJson(id)+"]"));
         }
         return 1;
     }
     //地标改颜色
-    private static int colorLandmark(ServerCommandSource source,String id,String color) throws CommandSyntaxException {
+    private static int colorLandmark(ServerCommandSource source,String id,Formatting color) throws CommandSyntaxException {
         ServerPlayerEntity player=source.getPlayer();
         if(!existPoint("default", id)){
             player.sendMessage(new LiteralText(LandmarkMod.config.landmark.landmarkNull));
         }else {
-            PointManager manager = new PointManager();
-            manager.colorPoint("default", id, color);
+            LandmarkMod.pointManager.colorPoint("default", id, color);
             player.sendMessage(Text.Serializer.fromJson("["+normalJson(LandmarkMod.config.landmark.landmarkColorTips)+","+
                     getSmpPointJson(id)+"]"));
         }
@@ -256,7 +233,7 @@ public class LandmarkCommand {
         if(!existPoint("default", id)){
             player.sendMessage(new LiteralText(LandmarkMod.config.landmark.landmarkNull));
         }else{
-            String color= getPoint("default", id).color;
+            Formatting color= getPoint("default", id).color;
             String name= getPoint("default", id).name;
             String dimension= getPoint("default", id).dimension;
             int x= getPoint("default", id).x;
@@ -264,7 +241,7 @@ public class LandmarkCommand {
             int z= getPoint("default", id).z;
 
             String msg="["+normalJson(String.format(LandmarkMod.config.share.landmarkShareTipsReceive,player.getGameProfile().getName()))+
-                    ","+String.format(LandmarkMod.config.jsons.landmarkShare,"["+name+"]",player1.getEntityName(),id,color,name,
+                    ","+String.format(LandmarkMod.config.jsons.landmarkShare,color + "["+name+"]",player1.getEntityName(),id,name,
                     x, y,z,LandmarkMod.config.landmark.dimensions_name.get(dimension),x,y,z,id)+
                     ","+ normalJson(LandmarkMod.config.share.landmarkShareTipsReceive2)+"]";
             if(broadcast){
@@ -315,9 +292,8 @@ public class LandmarkCommand {
     //保存地标到json文件
     private static int saveLandmark(ServerCommandSource source) throws CommandSyntaxException {
         ServerPlayerEntity player=source.getPlayer();
-        PointManager manager=new PointManager();
         try {
-            manager.savePoint();
+            LandmarkMod.pointManager.savePoint();
             player.sendMessage(new LiteralText(LandmarkMod.config.landmark.landmarkSaveTips));
         }catch (IOException e){
             e.printStackTrace();
@@ -333,32 +309,17 @@ public class LandmarkCommand {
 
     //重载配置文件
     private static int reloadConfigLandmark(ServerCommandSource source) throws CommandSyntaxException{
-        LandmarkMod.setupPoint();
+        LandmarkMod.setupPoint(source.getMinecraftServer());
         return 1;
     }
 
-
-
-    private static CompletableFuture<Suggestions> getSuggestionsBuilder(SuggestionsBuilder builder, List<String> list) {
-        String remaining = builder.getRemaining().toLowerCase(Locale.ROOT);
-
-        if(list.isEmpty()) { // If the list is empty then return no suggestions
-            return Suggestions.empty(); // No suggestions
-        }
-
-        for (String str : list) { // Iterate through the supplied list
-            if (str.toLowerCase(Locale.ROOT).startsWith(remaining)) {
-                builder.suggest(str); // Add every single entry to suggestions list.
-            }
-        }
-        return builder.buildFuture(); // Create the CompletableFuture containing all the suggestions
-    }
     private static String getSmpPointJson(String id) {
-        String name=getPoint("default",id).name; String color=getPoint("default",id).color;
+        String name=getPoint("default",id).name;
+        Formatting color=getPoint("default",id).color;
         int x=getPoint("default",id).x, y=getPoint("default",id).y,  z=getPoint("default",id).z;
         String dimension=getPoint("default",id).dimension;
 
-        return String.format(LandmarkMod.config.jsons.landmarkCreate, "[" + name + "]", color, id,
+        return String.format(LandmarkMod.config.jsons.landmarkCreate,color + "[" + name + "]", id,
                 x, y, z, LandmarkMod.config.landmark.dimensions_name.get(dimension), x, y, z, id);
     }
 

@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.server.ServerStartCallback;
+import net.minecraft.server.MinecraftServer;
 import net.xingmot.landmark.command.LandmarkCommand;
 import net.fabricmc.fabric.api.registry.CommandRegistry;
 import net.xingmot.landmark.config.LandmarkConfig;
@@ -17,15 +18,13 @@ import java.nio.charset.StandardCharsets;
 public class LandmarkMod implements ModInitializer {
 	public static LandmarkConfig config;
 	public static Pojo point;
-	public static String levelName;
+	public static PointManager pointManager;
+
 	@Override
 	public void onInitialize() {
 		if(setupConfig()){
 			CommandRegistry.INSTANCE.register(false, LandmarkCommand::register);
-			ServerStartCallback.EVENT.register(server -> {
-				levelName=server.getLevelName();
-				setupPoint();
-			});
+			ServerStartCallback.EVENT.register(LandmarkMod::setupPoint);
 		}
 
 	}
@@ -51,10 +50,10 @@ public class LandmarkMod implements ModInitializer {
 				return false;
 			}
 	}
-	public static void setupPoint(){
-		PointManager manager=new PointManager();
+	public static void setupPoint(MinecraftServer server){
+		pointManager=new PointManager(server);
 		try {
-			manager.loadPoint();
+			pointManager.loadPoint();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
