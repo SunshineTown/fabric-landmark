@@ -179,7 +179,7 @@ public class LandmarkCommand {
                 dimension=entry.getValue().dimension;
                 des=entry.getValue().description;        //暂时没做
                 jsons.append(String.format(LandmarkMod.config.jsons.listPointExample, id, color, LandmarkMod.config.landmark.dimensions_name.get(dimension),
-                        x, y, z, id, LandmarkMod.config.landmark.dimensions_name2.get(dimension), name, x, y, z,
+                        x, y, z, id, id,LandmarkMod.config.landmark.dimensions_name2.get(dimension)+"丨"+name, x, y, z,
                         "["+name+"]", id, id, id)).append(",");
             }
             jsons.append(LandmarkMod.config.jsons.listAddPoint);
