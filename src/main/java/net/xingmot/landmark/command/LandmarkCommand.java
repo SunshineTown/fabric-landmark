@@ -160,7 +160,7 @@ public class LandmarkCommand {
                 des=entry.getValue().description;        //暂时没做
                 jsons.append(String.format(LandmarkMod.config.jsons.listPointExample, id, LandmarkMod.config.landmark.dimensions_name.get(dimension),
                         x, y, z, id, id,LandmarkMod.config.landmark.dimensions_name2.get(dimension)+"丨"+name, x, y, z,
-                        color + "["+name+"]", id, id, id)).append(",");
+                        color + "["+name+"]§f", id, id, id)).append(",");
             }
             jsons.append(LandmarkMod.config.jsons.listAddPoint);
             jsons.append("]");
@@ -241,7 +241,7 @@ public class LandmarkCommand {
             int z= getPoint("default", id).z;
 
             String msg="["+normalJson(String.format(LandmarkMod.config.share.landmarkShareTipsReceive,player.getGameProfile().getName()))+
-                    ","+String.format(LandmarkMod.config.jsons.landmarkShare,color + "["+name+"]",player1.getEntityName(),id,name,
+                    ","+String.format(LandmarkMod.config.jsons.landmarkShare,color + "["+name+"]§f",player1.getEntityName(),id,name,
                     x, y,z,LandmarkMod.config.landmark.dimensions_name.get(dimension),x,y,z,id)+
                     ","+ normalJson(LandmarkMod.config.share.landmarkShareTipsReceive2)+"]";
             if(broadcast){
@@ -319,7 +319,7 @@ public class LandmarkCommand {
         int x=getPoint("default",id).x, y=getPoint("default",id).y,  z=getPoint("default",id).z;
         String dimension=getPoint("default",id).dimension;
 
-        return String.format(LandmarkMod.config.jsons.landmarkCreate,color + "[" + name + "]", id,
+        return String.format(LandmarkMod.config.jsons.landmarkCreate,color + "[" + name + "]§f", id,
                 x, y, z, LandmarkMod.config.landmark.dimensions_name.get(dimension), x, y, z, id);
     }
 
